@@ -1,18 +1,17 @@
+import * as acorn from "acorn";
+import {Options} from "acorn";
+import * as ESTree from "estree";
+import evaluate from "./eval";
+import {Scope} from "./scope";
 
-declare const require : (module: string) => any
-const acorn = require('acorn/dist/acorn.js')
+declare const require: (module: string) => any;
+const options: Options = {
+    ecmaVersion: 2015,
+    sourceType: "script",
+    locations: true
+};
 
-import { Scope } from './scope'
-import { Var } from './scope'
-import evaluate from './eval'
-
-const options = {
-    ecmaVersion: 5,
-    sourceType: 'script',
-    locations: true,
-}
-
-declare const Promise: any
+declare const Promise: any;
 
 // 导出默认对象
 const default_api: { [key: string]: any } = {
@@ -54,29 +53,30 @@ const default_api: { [key: string]: any } = {
     Array,
     JSON,
     Promise
-}
+};
 
 export function run(code: string, append_api: { [key: string]: any } = {}) {
-    const scope = new Scope('block')
-    scope.$const('this', this)
+    const scope = new Scope("block");
+    scope.$const("this", this);
 
     for (const name of Object.getOwnPropertyNames(default_api)) {
-        scope.$const(name, default_api[name])
+        scope.$const(name, default_api[name]);
     }
 
     for (const name of Object.getOwnPropertyNames(append_api)) {
-        scope.$const(name, append_api[name])
+        scope.$const(name, append_api[name]);
     }
 
     // 定义 module
-    const $exports = {}
-    const $module = { 'exports': $exports }
-    scope.$const('module', $module)
-    scope.$const('exports', $exports)
+    const $exports = {};
+    const $module = {exports: $exports};
+    scope.$const("module", $module);
+    scope.$const("exports", $exports);
 
-    evaluate(acorn.parse(code, options), scope)
+    const program = <ESTree.Node>acorn.parse(code, options);
+    evaluate(program, scope);
 
     // exports
-    const module_var = scope.$find('module')
-    return module_var ? module_var.$get().exports : null
+    const module_var = scope.$find("module");
+    return module_var?.$get().exports;
 }
