@@ -3,16 +3,22 @@
   "version": "v0.0.1",
   "license": "MIT",
   "scripts": {
+    "build": "parcel build src/main.ts",
+    "eslint": "eslint src --ext .ts"
+  },
+  "dependencies": {
     "acorn": "^6.1.1"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@typescript-eslint/parser": "^2.13.0",
     "@types/acorn": "^4.0.5",
     "@types/estree": "^0.0.41",
     "@types/node": "^13.1.1",
+    "@typescript-eslint/eslint-plugin": "^2.13.0",
+    "eslint": "^6.8.0",
     "parcel": "1.12.4",
+    "prettier": "^1.19.1",
     "ts-node": "^8.5.4",
-    "tslint": "^5.20.1",
     "typescript": "^3.7.4"
   }
 }

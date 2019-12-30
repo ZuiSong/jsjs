@@ -1,6 +1,6 @@
-export type ScopeType = "function" | "loop" | "switch" | "block";
+export type ScopeType = 'function' | 'loop' | 'switch' | 'block';
 
-export type Kind = "const" | "var" | "let";
+export type Kind = 'const' | 'var' | 'let';
 
 export interface Var {
     $get(): any;
@@ -15,21 +15,21 @@ export class ScopeVar implements Var {
     kind: Kind;
 
     constructor(kind: Kind, value: any) {
-        this.value = value;
-        this.kind = kind;
+        this.value = value
+        this.kind = kind
     }
 
     $set(value: any): boolean {
-        if (this.value === "const") {
-            return false;
+        if (this.value === 'const') {
+            return false
         } else {
-            this.value = value;
-            return true;
+            this.value = value
+            return true
         }
     }
 
     $get(): any {
-        return this.value;
+        return this.value
     }
 }
 
@@ -38,21 +38,21 @@ export class PropVar implements Var {
     property: string;
 
     constructor(object: any, property: string) {
-        this.object = object;
-        this.property = property;
+        this.object = object
+        this.property = property
     }
 
     $set(value: any) {
-        this.object[this.property] = value;
-        return true;
+        this.object[this.property] = value
+        return true
     }
 
     $get() {
-        return this.object[this.property];
+        return this.object[this.property]
     }
 
     $delete() {
-        delete this.object[this.property];
+        delete this.object[this.property]
     }
 }
 
@@ -61,69 +61,70 @@ export class Scope {
     invasived: boolean;
     private readonly content: { [key: string]: Var };
     private readonly parent: Scope | null;
-    private prefix: string = "@";
+    private readonly prefix: string = '@';
 
     constructor(type: ScopeType, parent?: Scope, label?: string) {
-        this.type = type;
-        this.parent = parent || null;
-        this.content = {};
-        this.invasived = false;
+        this.type = type
+        this.parent = parent || null
+        this.content = {}
+        this.invasived = false
     }
 
     $find(raw_name: string): Var | null {
-        const name = this.prefix + raw_name;
+        const name: string = this.prefix + raw_name
         if (this.content.hasOwnProperty(name)) {
-            return this.content[name];
+            return this.content[name]
         } else if (this.parent) {
-            return this.parent.$find(raw_name);
+            return this.parent.$find(raw_name)
         } else {
-            return null;
+            return null
         }
     }
 
     $let(raw_name: string, value: any): boolean {
-        const name = this.prefix + raw_name;
-        const $var = this.content[name];
+        const name: string = this.prefix + raw_name
+        const $var = this.content.hasOwnProperty(name)
         if (!$var) {
-            this.content[name] = new ScopeVar("let", value);
-            return true;
+            this.content[name] = new ScopeVar('let', value)
+            return true
         } else {
-            return false;
+            return false
         }
     }
 
     $const(raw_name: string, value: any): boolean {
-        const name = this.prefix + raw_name;
-        const $var = this.content[name];
+        const name: string = this.prefix + raw_name
+        const $var = this.content.hasOwnProperty(name)
         if (!$var) {
-            this.content[name] = new ScopeVar("const", value);
-            return true;
+            this.content[name] = new ScopeVar('const', value)
+            return true
         } else {
-            return false;
+            return false
         }
     }
 
     $var(raw_name: string, value: any): boolean {
-        const name = this.prefix + raw_name;
-        let scope: Scope = this;
+        const name = this.prefix + raw_name
+        let scope: Scope = this
 
-        while (scope.parent !== null && scope.type !== "function") {
-            scope = scope.parent;
+        while (scope.parent !== null && scope.type !== 'function') {
+            scope = scope.parent
         }
-        const $var = scope.content[name];
+        const $var = scope.content[name]
         if (!$var) {
-            this.content[name] = new ScopeVar("var", value);
-            return true;
+            this.content[name] = new ScopeVar('var', value)
+            return true
         } else {
-            return false;
+            return false
         }
     }
 
     $declar(kind: Kind, raw_name: string, value: any): boolean {
-        return {
+        let declares = {
             var: () => this.$var(raw_name, value),
             let: () => this.$let(raw_name, value),
             const: () => this.$const(raw_name, value)
-        }[kind]();
+        }
+        return declares[kind]()
     }
 }

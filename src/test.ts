@@ -1,14 +1,13 @@
 // import * as interpreter from './main'
-import * as interpreter from "./main";
+import * as interpreter from './main'
 
 // 解释器执行 hello world
+
 let code = `
-function test(a){
-    console.log(a)
-}
+const test = (a)=>a+1
 console.log(test('hello world'))
-`;
-interpreter.run(code);
+`
+interpreter.run(code)
 
 // // 自举解释器代码
 // declare const require, __dirname
