@@ -9,11 +9,15 @@ export interface Var {
 }
 
 export class ScopeVar implements Var {
+
     kind: Kind;
 
+    private inited: boolean = false;
+
     constructor(kind: Kind, value: any) {
-        this._value = value
         this.kind = kind
+        this._value = value
+        this.inited = true
     }
 
     _value: any;
@@ -23,10 +27,11 @@ export class ScopeVar implements Var {
     }
 
     set value(value: any) {
-        if (this.kind === 'const') {
+        if (this.kind === 'const' && this.inited) {
             throw 'const variable can not reassign'
             // this._value = value
         } else {
+            this.inited = true
             this._value = value
         }
     }

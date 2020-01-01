@@ -7,7 +7,7 @@
     "eslint": "eslint src --ext .ts"
   },
   "dependencies": {
-    "acorn": "^6.1.1"
+    "acorn": "^7.1.0"
   },
   "devDependencies": {
     "@types/acorn": "^4.0.5",

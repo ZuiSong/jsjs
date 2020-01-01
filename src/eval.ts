@@ -434,10 +434,11 @@ const evaluate_map: { [key in ESTree.Node['type']]: any } = {
     },
 
     LogicalExpression: (node: ESTree.LogicalExpression, scope: Scope) => {
-        return {
+        let map: { [key in ESTree.LogicalOperator]: any } = {
             '||': () => evaluate(node.left, scope) || evaluate(node.right, scope),
             '&&': () => evaluate(node.left, scope) && evaluate(node.right, scope)
-        }[node.operator]()
+        }
+        return map[node.operator]()
     },
 
     MemberExpression: (node: ESTree.MemberExpression, scope: Scope) => {
