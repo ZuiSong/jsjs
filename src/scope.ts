@@ -3,33 +3,32 @@ export type ScopeType = 'function' | 'loop' | 'switch' | 'block';
 export type Kind = 'const' | 'var' | 'let';
 
 export interface Var {
-    $get(): any;
-
-    $set(value: any): boolean;
+    value: any
 
     // $call($this: any, args: Array<any>): any
 }
 
 export class ScopeVar implements Var {
-    value: any;
     kind: Kind;
 
     constructor(kind: Kind, value: any) {
-        this.value = value
+        this._value = value
         this.kind = kind
     }
 
-    $set(value: any): boolean {
-        if (this.value === 'const') {
-            return false
-        } else {
-            this.value = value
-            return true
-        }
+    _value: any;
+
+    get value(): any {
+        return this._value
     }
 
-    $get(): any {
-        return this.value
+    set value(value: any) {
+        if (this.kind === 'const') {
+            throw 'const variable can not reassign'
+            // this._value = value
+        } else {
+            this._value = value
+        }
     }
 }
 
@@ -42,13 +41,12 @@ export class PropVar implements Var {
         this.property = property
     }
 
-    $set(value: any) {
-        this.object[this.property] = value
-        return true
+    get value() {
+        return this.object[this.property]
     }
 
-    $get() {
-        return this.object[this.property]
+    set value(value: any) {
+        this.object[this.property] = value
     }
 
     $delete() {

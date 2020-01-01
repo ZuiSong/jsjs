@@ -52,7 +52,7 @@ const default_api: { [key: string]: any } = {
     RegExp,
     Array,
     JSON,
-    Promise
+    Promise,
 }
 
 export function run(code: string, append_api: { [key: string]: any } = {}) {
@@ -78,5 +78,6 @@ export function run(code: string, append_api: { [key: string]: any } = {}) {
 
     // exports
     const module_var = scope.$find('module')
-    return module_var?.$get().exports
+    return module_var?.value.exports
 }
+

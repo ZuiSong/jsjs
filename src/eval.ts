@@ -1,16 +1,19 @@
 import * as ESTree from 'estree'
-import {BinaryOperator} from 'estree'
 
 import {EvaluateFunc} from './type'
-import {Scope, Var} from './scope'
+import {PropVar, Scope, Var} from './scope'
 
 const BREAK_SINGAL: {} = {}
 const CONTINUE_SINGAL: {} = {}
 const RETURN_SINGAL: { result: any } = {result: undefined}
 
-const evaluate_map = {
+const evaluate_map: { [key in ESTree.Node['type']]: any } = {
     Program: (program: ESTree.Program, scope: Scope) => {
-        for (const node of program.body) evaluate(node, scope)
+        let result = undefined
+        for (const node of program.body) {
+            result = evaluate(node, scope)
+        }
+        return result
     },
 
     Identifier: (node: ESTree.Identifier, scope: Scope) => {
@@ -19,10 +22,11 @@ const evaluate_map = {
         } // 奇怪的问题
         const $var = scope.$find(node.name)
         if ($var) {
-            return $var.$get()
+            return $var.value
         } // 返回
         else {
-            throw `[Error] ${node.loc}, '${node.name}' 未定义`
+            // return undefined
+            throw `[Error] ${JSON.stringify(node.loc)}, '${node.name}' 未定义`
         }
     },
 
@@ -208,7 +212,7 @@ const evaluate_map = {
             if (result === BREAK_SINGAL) {
                 break
             } else if (result === CONTINUE_SINGAL) {
-                continue
+
             } else if (result === RETURN_SINGAL) {
                 return result
             }
@@ -242,7 +246,7 @@ const evaluate_map = {
 
     ThisExpression: (node: ESTree.ThisExpression, scope: Scope) => {
         const this_val = scope.$find('this')
-        return this_val ? this_val.$get() : null
+        return this_val?.value
     },
 
     ArrayExpression: (node: ESTree.ArrayExpression, scope: Scope) => {
@@ -304,7 +308,7 @@ const evaluate_map = {
             typeof: () => {
                 if (node.argument.type === 'Identifier') {
                     const $var = scope.$find(node.argument.name)
-                    return $var ? typeof $var.$get() : 'undefined'
+                    return typeof $var?.value
                 } else {
                     return typeof evaluate(node.argument, scope)
                 }
@@ -322,7 +326,7 @@ const evaluate_map = {
                     }
                 } else if (node.argument.type === 'Identifier') {
                     const $this = scope.$find('this')
-                    if ($this) return $this.$get()[node.argument.name]
+                    if ($this) return $this.value[node.argument.name]
                 }
             }
         }[node.operator]()
@@ -333,10 +337,7 @@ const evaluate_map = {
         scope: Scope
     ) => {
         const {prefix} = node
-        let $var: {
-            $set(value: any): boolean;
-            $get(): any;
-        }
+        let $var: Var
         if (node.argument.type === 'Identifier') {
             const {name} = node.argument
             $var = <Var>scope.$find(name)
@@ -347,21 +348,19 @@ const evaluate_map = {
             let property = argument.computed
                 ? evaluate(argument.property, scope)
                 : (<ESTree.Identifier>argument.property).name
-            $var = {
-                $set(value: any) {
-                    object[property] = value
-                    return true
-                },
-                $get() {
-                    return object[property]
-                }
-            }
+            $var = new PropVar(object, property)
         }
 
 
         return {
-            '--': v => ($var.$set(v - 1), prefix ? --v : v--),
-            '++': v => ($var.$set(v + 1), prefix ? ++v : v++)
+            '--': v => {
+                $var.value = v - 1
+                prefix ? --v : v--
+            },
+            '++': v => {
+                $var.value = v + 1
+                prefix ? ++v : v++
+            }
         }[node.operator](evaluate(node.argument, scope))
     },
 
@@ -369,7 +368,7 @@ const evaluate_map = {
         {left, operator, right}: ESTree.BinaryExpression,
         scope: Scope
     ) => {
-        let operators: { [key in BinaryOperator]: (x1, x2) => any } =
+        let operators: { [key in ESTree.BinaryOperator]: (x1, x2) => any } =
             {
                 '==': (a, b) => a == b,
                 '!=': (a, b) => a != b,
@@ -398,10 +397,7 @@ const evaluate_map = {
     },
 
     AssignmentExpression: (node: ESTree.AssignmentExpression, scope: Scope) => {
-        let $var: {
-            $set(value: any): boolean;
-            $get(): any;
-        }
+        let $var: Var
 
         if (node.left.type === 'Identifier') {
             const {name} = node.left
@@ -414,33 +410,27 @@ const evaluate_map = {
             let property = left.computed
                 ? evaluate(left.property, scope)
                 : (<ESTree.Identifier>left.property).name
-            $var = {
-                $set(value: any) {
-                    object[property] = value
-                    return true
-                },
-                $get() {
-                    return object[property]
-                }
-            }
+            $var = new PropVar(object, property)
         } else {
             throw '如果出现在这里，那就说明有问题了'
         }
 
-        return {
-            '=': v => ($var.$set(v), v),
-            '+=': v => ($var.$set($var.$get() + v), $var.$get()),
-            '-=': v => ($var.$set($var.$get() - v), $var.$get()),
-            '*=': v => ($var.$set($var.$get() * v), $var.$get()),
-            '/=': v => ($var.$set($var.$get() / v), $var.$get()),
-            '%=': v => ($var.$set($var.$get() % v), $var.$get()),
-            '<<=': v => ($var.$set($var.$get() << v), $var.$get()),
-            '>>=': v => ($var.$set($var.$get() >> v), $var.$get()),
-            '>>>=': v => ($var.$set($var.$get() >>> v), $var.$get()),
-            '|=': v => ($var.$set($var.$get() | v), $var.$get()),
-            '^=': v => ($var.$set($var.$get() ^ v), $var.$get()),
-            '&=': v => ($var.$set($var.$get() & v), $var.$get())
-        }[node.operator](evaluate(node.right, scope))
+        let map: { [key in ESTree.AssignmentOperator]: (a: any) => any } = {
+            '=': v => $var.value = v,
+            '+=': v => $var.value += v,
+            '-=': v => $var.value -= v,
+            '*=': v => $var.value *= v,
+            '/=': v => $var.value /= v,
+            '%=': v => $var.value %= v,
+            '<<=': v => $var.value <<= v,
+            '>>=': v => $var.value >>= v,
+            '>>>=': v => $var.value >>>= v,
+            '|=': v => $var.value |= v,
+            '^=': v => $var.value ^= v,
+            '&=': v => $var.value &= v,
+            '**=': v => $var.value **= v,
+        }
+        return map[node.operator](evaluate(node.right, scope))
     },
 
     LogicalExpression: (node: ESTree.LogicalExpression, scope: Scope) => {
@@ -475,7 +465,7 @@ const evaluate_map = {
             return func.apply(object, args)
         } else {
             const this_val = scope.$find('this')
-            return func.apply(this_val ? this_val.$get() : null, args)
+            return func.apply(this_val?.value, args)
         }
     },
 
@@ -583,7 +573,11 @@ const evaluate_map = {
         throw `${node.type} 未实现`
     },
     ExportSpecifier: (node: ESTree.ExportSpecifier, scope: Scope) => {
-        throw `${node.type} 未实现`
+        // throw `${node.type} 未实现`
+        console.log(`${node.type} 未实现`)
+        const value = scope.$find('exports')?.value
+        value['node.exported.name'] =
+            scope.$find(node.exported.name)?.value
     },
     YieldExpression: (node: ESTree.YieldExpression, scope: Scope) => {
         throw `${node.type} 未实现`
